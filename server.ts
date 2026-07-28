@@ -92,15 +92,20 @@ app.post('/api/test-sheets', async (req, res) => {
   }
 });
 
+const STOP_WORDS = new Set([
+  'как', 'какой', 'какая', 'какие', 'что', 'где', 'когда', 'почему', 'зачем', 'ли', 'для', 'на', 'в', 'во', 'с', 'со', 'по', 'к', 'ко', 'из', 'от', 'до', 'и', 'или', 'не', 'это', 'я', 'вы', 'мне', 'нужен', 'нужно'
+]);
+
 function searchKnowledgeBase(data: any[], query: string) {
   const normalizedQuery = query.toLowerCase().replace(/[.,?!]/g, '').trim();
-  const queryWords = normalizedQuery.split(/\s+/).filter(w => w.length > 2);
+  const queryWords = normalizedQuery.split(/\s+/).filter(w => w.length > 2 && !STOP_WORDS.has(w));
 
   const scoredData = data.map(row => {
     let score = 0;
     const textToSearch = [
       (row.category || '').toLowerCase(),
       (row.question || '').toLowerCase(),
+      (row.answer || '').toLowerCase(),
       (row.tags || '').toLowerCase()
     ].join(' ').replace(/[.,?!]/g, '');
 
