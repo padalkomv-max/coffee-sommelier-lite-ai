@@ -124,10 +124,11 @@ app.post('/api/chat', async (req, res) => {
     const { message, history, systemPrompt, googleSheetsUrl } = req.body;
 
     let knowledgeContext = '';
+    let relevantRows: any[] = [];
     
     if (googleSheetsUrl) {
       const data = await fetchKnowledgeBase(googleSheetsUrl);
-      const relevantRows = searchKnowledgeBase(data, message);
+      relevantRows = searchKnowledgeBase(data, message);
       
       if (relevantRows.length > 0) {
         knowledgeContext = 'Контекст из базы знаний магазина (отвечай строго на его основе):\n' +
@@ -201,6 +202,22 @@ app.post('/api/chat', async (req, res) => {
 
     const response = await chat.sendMessage({ message });
     const data = JSON.parse(response.text);
+
+    if (process.env.LOGGING_WEBHOOK_URL) {
+      const payload = {
+        question: message,
+        category: relevantRows.length > 0 ? relevantRows[0].category : 'Без категории',
+        answerType: relevantRows.length > 0 ? 'из базы' : 'общий'
+      };
+      
+      fetch(process.env.LOGGING_WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }).catch(err => {
+        console.error('Ошибка при отправке лога:', err);
+      });
+    }
 
     res.json(data);
   } catch (error: any) {
